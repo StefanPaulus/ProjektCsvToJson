@@ -3,46 +3,174 @@
 ## 1. Einführung
 
 ### 1.1 Projektziel
-Ziel dieses Projekts ist es, einen Cloud-Service zu entwickeln, der CSV-Dateien automatisch in JSON-Dateien konvertiert. Der Service nutzt AWS S3-Buckets und AWS Lambda-Funktionen und wird vollständig im AWS Learner-Lab bereitgestellt.
+Es ist Ziel dieses Projekts, einen Cloud-Service zur Verfügung zu stellen, der CSV-Dateien in JSON-Dateien konventiert. Der Service nutzt AWS S3-Buckets und AWS Lambda-Funktionen und wird vollständig im AWS Learner-Lab bereitgestellt.
 
 ### 1.2 Technische Anforderungen
-- **CSV zu JSON Konvertierung:** Ein Service, der CSV-Dateien in JSON umwandelt, sobald sie in das S3-In-Bucket hochgeladen werden.
-- **Automatisierte Bereitstellung:** Bereitstellung und Inbetriebnahme über ein CLI-Script.
-- **Versionierung:** Alle Konfigurationsdateien und der Code sind versioniert und in einem Git-Repository abgelegt.
-
+- **CSV zu JSON Konvertierung:** Wenn man eine CSV Datei ins Bucket hochlade wird sie in JSON konventiert
+- **Automatisierte Bereitstellung:** Bereitstellung über ein CLI-Script.
+- **Versionierung:** Versionisierung durch Github
 ---
 
 ## 2. Systemübersicht
 
 ### 2.1 Architektur
-Die Architektur des Systems besteht aus den folgenden Komponenten:
 - **AWS S3 Buckets:** Ein Input-Bucket für CSV-Dateien und ein Output-Bucket für die JSON-Dateien.
-- **AWS Lambda:** Eine Lambda-Funktion, die ausgelöst wird, sobald eine Datei in das Input-Bucket hochgeladen wird und die CSV in JSON konvertiert.
-- **Versionierung:** Alle Skripte und Konfigurationsdateien sind in einem Git-Repository gespeichert.
+- **AWS Lambda:** wird aktiviert wenn man eine CSV-Datei im input bucket hochläd.
+- **Versionierung:** versionsverlauf in Github.
 
 ### 2.2 Ablauf der Konvertierung
-- Der Benutzer lädt eine CSV-Datei in das Input-Bucket hoch.
-- Dies löst eine AWS Lambda-Funktion aus, die die Datei konvertiert und die JSON-Datei im Output-Bucket speichert.
+Der Benutzer lädt eine CSV-Datei in das Input-Bucket hoch was wiederum eine AWS Lambda-Funktion aus, die die Datei konvertiert und die JSON-Datei im Output-Bucket speichert.
 
 ---
 
 ## 3. Inbetriebnahme
 
 ### 3.1 Vorbereitung
-- **AWS-Konto und S3-Buckets:** Erstellen Sie ein AWS-Konto und konfigurieren Sie die notwendigen S3-Buckets.
-- **Lambda-Funktion:** Stellen Sie sicher, dass die Lambda-Funktion richtig konfiguriert ist.
+Wir brauchen Ein Aws Konto und müssen sichergehen ob die Architektur sicher konfiguriert ist
 
 ### 3.2 Installation
-Führen Sie das folgende Skript aus, um alle notwendigen AWS-Komponenten zu erstellen und den Dienst zu installieren:
+um die AWS Komponente zu instalieren nussten wir ```./test.sh``` instalieren.
 
+Was macht dieses Skript?
+
+---
+
+### **Variablen definieren**
 ```bash
-./init.sh
+AWS_ACCOUNT_ID="577194944584"
+LAMBDA_ROLE_ARN="arn:aws:iam::$AWS_ACCOUNT_ID:role/LabRole"
+REGION="us-east-1"
+INPUT_BUCKET="mein-csv-input-bucket"
+OUTPUT_BUCKET="mein-json-output-bucket"
+LAMBDA_NAME="CsvToJsonConverter"
 ```
+- Speichert folgende werte:
+  - **Account-ID** (AWS-Konto)
+  - **IAM-Rolle** für Lambda
+  - **AWS-Region**
+  - **Namen der S3-Buckets**
+  - **Lambda-Funktionsname**
 
+---
+
+### **S3-Buckets erstellen**
+```bash
+aws s3 mb s3://$INPUT_BUCKET || echo "⚠️ Bucket $INPUT_BUCKET existiert bereits."
+aws s3 mb s3://$OUTPUT_BUCKET || echo "⚠️ Bucket $OUTPUT_BUCKET existiert bereits."
+```
+erstellt ein Bucket für Output und einen für input.
+Fass es diese schon gibt wird eine warnung ausgegeben
+
+---
+
+### **Test-CSV-Datei erstellen**
+```bash
+TEST_CSV="test.csv"
+echo -e "name,age,city\nAlice,30,New York\nBob,25,San Francisco" > $TEST_CSV
+```
+Erstellt eine CSV datei als Test
+
+---
+
+### **Lambda ZIP-Datei erstellen**
+```bash
+zip -r lambda.zip index.js node_modules
+```
+Zippt den Lambda-Code und die node Module.
+
+---
+
+### ** Lambda-Funktion erstellen oder aktualisieren**
+```bash
+if aws lambda get-function --function-name $LAMBDA_NAME --region $REGION >/dev/null 2>&1; then
+    aws lambda update-function-code --function-name $LAMBDA_NAME --zip-file fileb://lambda.zip --region $REGION
+else
+    aws lambda create-function --function-name $LAMBDA_NAME \
+    --runtime nodejs18.x \
+    --role $LAMBDA_ROLE_ARN \
+    --handler index.handler \
+    --zip-file fileb://lambda.zip \
+    --region $REGION
+fi
+```
+Die Lambda Funktion wird je nach dem ob es sie schon gibt aktualisiert oder erstellt
+
+### **Lambda-Funktion für S3-Trigger berechtigen**
+```bash
+aws lambda add-permission --function-name $LAMBDA_NAME \
+--statement-id s3invoke \
+--action "lambda:InvokeFunction" \
+--principal s3.amazonaws.com \
+--source-arn arn:aws:s3:::$INPUT_BUCKET || echo "⚠️ Berechtigung existiert bereits."
+```
+Der Bucket kriegt hier die Berechtigung, die Lambda-Funktion auszulösen.
+
+---
+
+### **S3-Trigger für Lambda konfigurieren**
+```bash
+aws s3api put-bucket-notification-configuration --bucket $INPUT_BUCKET \
+--notification-configuration "{
+     \"LambdaFunctionConfigurations\": [
+        {
+            \"LambdaFunctionArn\": \"arn:aws:lambda:$REGION:$AWS_ACCOUNT_ID:function:$LAMBDA_NAME\",
+            \"Events\": [\"s3:ObjectCreated:*\"]
+        }
+    ]
+}"
+```
+Sorgt dafür dass wenn eine Datei hochgeladen wird, wird Die Lambda-Funktion ausgelöst.
+
+---
+
+### **Test-CSV-Datei hochladen**
+```bash
+aws s3 cp $TEST_CSV s3://$INPUT_BUCKET/
+```
+Lädt die Test-CSV in den Input-Bucket hoch.
+
+---
+
+### **Warten auf die JSON-Datei**
+```bash
+attempts=0
+while [ $attempts -lt 10 ]; do
+    if aws s3 ls s3://$OUTPUT_BUCKET/test.json >/dev/null 2>&1; then
+        echo "✅ JSON-Datei gefunden!"
+        break
+    fi
+    sleep 3
+    ((attempts++))
+done
+```
+Wartet bis zu 30 Sekunden auf die JSON-Datei im Output-Bucket.
+
+---
+
+### **JSON-Datei herunterladen und anzeigen**
+```bash
+if aws s3 ls s3://$OUTPUT_BUCKET/test.json >/dev/null 2>&1; then
+    echo "⬇️ Lade JSON herunter..."
+    aws s3 cp s3://$OUTPUT_BUCKET/test.json test.json
+    echo "📜 Inhalt der JSON-Datei:"
+    cat test.json
+else
+    echo "❌ Fehler: JSON-Datei wurde nicht erstellt! Überprüfe die Lambda-Funktion."
+fi
+```
+falls es funktioniert hat wird die JSON Datei hochgeladen
+
+
+### **Zusammenfassung**
 Dieses Skript:
-1. Erstellt die S3-Buckets.
-2. Setzt die Lambda-Funktion und deren Berechtigungen auf.
-3. Testet die gesamte Konvertierung.
+✅ Erstellt die benötigten **AWS S3-Buckets**  
+✅ Erstellt eine **Test-CSV-Datei**  
+✅ Erstellt oder aktualisiert eine **AWS Lambda-Funktion**  
+✅ Konfiguriert **S3-Trigger für Lambda**  
+✅ Lädt eine **CSV-Datei hoch**, um die Konvertierung zu testen  
+✅ Wartet auf die **JSON-Ausgabe** und lädt sie herunter  
+
+Das Ganze automatisiert die **Bereitstellung eines CSV-zu-JSON Konvertierungs-Services** in AWS! 🚀.
 
 ### 3.3 Konfiguration
 Ändern Sie die Parameter in der Datei `config.json`, um Anpassungen wie das Delimiter-Zeichen oder spezifische Bucket-Namen vorzunehmen.
