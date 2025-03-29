@@ -160,18 +160,6 @@ fi
 ```
 falls es funktioniert hat wird die JSON Datei hochgeladen
 
-
-### **Zusammenfassung**
-Dieses Skript:
-✅ Erstellt die benötigten **AWS S3-Buckets**  
-✅ Erstellt eine **Test-CSV-Datei**  
-✅ Erstellt oder aktualisiert eine **AWS Lambda-Funktion**  
-✅ Konfiguriert **S3-Trigger für Lambda**  
-✅ Lädt eine **CSV-Datei hoch**, um die Konvertierung zu testen  
-✅ Wartet auf die **JSON-Ausgabe** und lädt sie herunter  
-
-Das Ganze automatisiert die **Bereitstellung eines CSV-zu-JSON Konvertierungs-Services** in AWS! 🚀.
-
 ### 3.3 Konfiguration
 Ändern Sie die Parameter in der Datei `config.json`, um Anpassungen wie das Delimiter-Zeichen oder spezifische Bucket-Namen vorzunehmen.
 
