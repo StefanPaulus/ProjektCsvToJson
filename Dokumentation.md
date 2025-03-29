@@ -160,9 +160,6 @@ fi
 ```
 falls es funktioniert hat wird die JSON Datei hochgeladen
 
-### 3.3 Konfiguration
-Ändern Sie die Parameter in der Datei `config.json`, um Anpassungen wie das Delimiter-Zeichen oder spezifische Bucket-Namen vorzunehmen.
-
 ---
 
 ## 4. Git-Repository
