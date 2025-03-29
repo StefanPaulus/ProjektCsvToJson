@@ -165,57 +165,110 @@ falls es funktioniert hat wird die JSON Datei hochgeladen
 ## 4. Git-Repository
 
 ### 4.1 Struktur des Repositories
-Das Repository enthält die folgenden Dateien:
-- `init.sh` – Skript zur Initialisierung der Umgebung.
-- `config.json` – Konfigurationsdatei für den CSV-zu-JSON-Konvertierungsservice.
-- `README.md` – Diese Dokumentation.
-- `lambda_function.py` – Die AWS Lambda-Funktion zur CSV-zu-JSON-Konvertierung.
 
-### 4.2 Versionsverwaltung
-Alle Änderungen werden mit Git versioniert. Dies ermöglicht eine nachvollziehbare Dokumentation der Änderungen und des Fortschritts.
+
+| **Dateiname**         | **Beschreibung** |
+|----------------------|----------------|
+| `node_modules/`      | Enthält installierte Node.js-Abhängigkeiten. |
+| `Dokumentation.md`   | Dokumentation des Projekts.|
+| `README.md`         | Allgemeine Projektbeschreibung mit Nutzungshinweisen. |
+| `index.js`          | Extrahier und C¨Konventiert die CSV Datei |
+| `init.sh`          | Shell-Skript zur Initialisierung oder Einrichtung der Umgebung. |
+| `lambda.zip`       | Bereitstellung einer AWS Lambda-Funktion. |
+| `package-lock.json` | Bildet die instalierte npm-Pakete ab. |
+| `package.json`      | Enthält Metadaten. |
+| `test.csv`         | Testdatei im CSV-Format. |
+| `test.json`        | Testdatei im JSON-Format. |
+| `test.sh`          | Shell-Skript für Tests oder Automatisierungsprozesse. |
+
+
 
 ---
 
 ## 5. Test und Protokollierung
 
 ### 5.1 Testfälle
-Die Tests stellen sicher, dass der Service wie erwartet funktioniert. Jede CSV-Datei, die hochgeladen wird, sollte korrekt in eine JSON-Datei umgewandelt werden. 
-
-Testprotokoll:
-- **Test 1:** Hochladen einer einfachen CSV-Datei → JSON-Datei wird im Output-Bucket gespeichert.
-- **Test 2:** Verwendung unterschiedlicher Delimiter-Zeichen → JSON-Datei wird korrekt konvertiert.
+Der Test stellt stellt sicher das CSV Dateien Wirklich in JSON Konventiert werden
 
 ### 5.2 Testprotokolle und Screenshots
-Die vollständigen Testergebnisse, einschließlich der verwendeten Testdateien und Screenshots, sind als Teil der Dokumentation im Repository abgelegt.
+
+
 
 ---
 
 ## 6. Konvertierungsfunktion
 
 ### 6.1 Funktionsweise der Konvertierung
-Die Lambda-Funktion `lambda_function.py` liest die CSV-Datei, verarbeitet sie zeilenweise und speichert das Ergebnis als JSON-Datei im Output-Bucket.
+Die Konventierung wird von einer Javascript Datei `Index.js` durchgeführt.
+
+#### `Index.js`
+```js
+const AWS = require('aws-sdk');
+const s3 = new AWS.S3();
+const csv = require('csv-parser');
+const stream = require('stream');
+exports.handler = async (event) => {
+    try {
+        // 1. Extrahiere Bucket & Datei-Info aus Event
+        const bucketName = event.Records[0].s3.bucket.name;
+        const fileKey = event.Records[0].s3.object.key;
+        const outputBucket = 'mein-json-output-bucket';
+        const outputKey = fileKey.replace('.csv', '.json');
+        console.log(Empfangenes S3-Event: Bucket=${bucketName}, Datei=${fileKey});
+        // 2. CSV-Datei aus S3 abrufen
+        const csvData = await s3.getObject({ Bucket: bucketName, Key: fileKey }).promise();
+        // 3. CSV in JSON konvertieren
+        const jsonData = await parseCsv(csvData.Body);
+        // 4. JSON-Daten mit schöner Formatierung (2 Leerzeichen Einrückung) und Zeilenumbrüchen
+        const formattedJsonData = JSON.stringify(jsonData, null, 2); // 2 bedeutet 2 Leerzeichen Einrückung
+        console.log('Konvertierte JSON-Daten:', formattedJsonData);
+        // 5. JSON-Datei in S3 hochladen (mit Formatierung)
+        await s3.putObject({
+            Bucket: outputBucket,
+            Key: outputKey,
+            Body: formattedJsonData,  // Formatierte JSON-Daten
+            ContentType: 'application/json'
+        }).promise();
+        console.log(✅ Erfolgreich konvertiert: ${fileKey} -> ${outputKey});
+    } catch (error) {
+        console.error('❌ Fehler:', error);
+    }
+};
+// ✅ Neue CSV-Parsing-Funktion
+function parseCsv(csvBuffer) {
+    return new Promise((resolve, reject) => {
+        const results = [];
+        const readable = new stream.Readable();
+        readable._read = () => {}; // Keine neue Datenquelle nötig
+        readable.push(csvBuffer);
+        readable.push(null); // Stream-Ende signalisieren
+        readable
+            .pipe(csv())
+            .on('data', (data) => results.push(data))
+            .on('end', () => resolve(results))
+            .on('error', reject);
+    });
+}
+```
 
 #### Beispiel für eine CSV-Datei:
 ```csv
-name,email,age
-John Doe,john@example.com,29
-Jane Smith,jane@example.com,34
+name,age,city
+Alice,30,New York
+Bob,25,San Francisco
+Charlie,35,Boston
+David,40,Los Angeles
+Eva,22,Chicago
+Frank,29,Miami
+Grace,31,Seattle
+Hannah,28,Austin
+Ivy,24,Denver
+Jack,26,Washington
 ```
 
 #### Beispiel für das JSON-Ergebnis:
 ```json
-[
-  {
-    "name": "John Doe",
-    "email": "john@example.com",
-    "age": 29
-  },
-  {
-    "name": "Jane Smith",
-    "email": "jane@example.com",
-    "age": 34
-  }
-]
+[{"name":"Alice","age":"30","city":"New York"},{"name":"Bob","age":"25","city":"San Francisco"},{"name":"Charlie","age":"35","city":"Boston"},{"name":"David","age":"40","city":"Los Angeles"},{"name":"Eva","age":"22","city":"Chicago"},{"name":"Frank","age":"29","city":"Miami"},{"name":"Grace","age":"31","city":"Seattle"},{"name":"Hannah","age":"28","city":"Austin"},{"name":"Ivy","age":"24","city":"Denver"},{"name":"Jack","age":"26","city":"Washington"}]
 ```
 
 ---
@@ -226,18 +279,15 @@ Jane Smith,jane@example.com,34
 - **init.sh:** Installiert alle benötigten AWS-Komponenten.
 - **test.sh:** Lädt automatisch eine CSV-Datei hoch und überprüft die Konvertierung.
 
-Beide Skripte arbeiten auch bei mehrfacher Ausführung fehlerfrei.
 
 ---
 
 ## 8. Reflexion
+### Ken
+Da ich in den Blöcken in denen wir dieses Projekt gamacht haben krank war konnte habe ich hauptzächlich ausserhalb der Schulzeit daran gearbeitet. Jedoch konnte ich beim zweiten Block mithelfen per Teams-call. Ich habe hauptzächlich beim Bugfixen geholfen per pair programming (entweder durch shared screen in Teams oder durch's physisched mitschauen) und die jeweiligen Tests überprüft. Ich habe daher imernoch mein bestes versucht hilfreich zu sein und beim Projekt etwas beizutragen.
 
-### 8.1 Positive Aspekte
-- **Einfache Installation und Konfiguration:** Der Service kann mit einem einzigen Skript installiert und betrieben werden.
-- **Cloud-Integration:** Die Lösung nutzt AWS-Dienste und zeigt, wie leistungsfähig Cloud-Computing sein kann.
+### Stefan
 
-### 8.2 Verbesserungspotential
-- **Fehlerbehandlung:** Es könnte eine erweiterte Fehlerbehandlung implementiert werden, um verschiedene Fehlerquellen wie fehlerhafte CSV-Dateien oder Berechtigungsprobleme besser zu adressieren.
 
 ---
 
