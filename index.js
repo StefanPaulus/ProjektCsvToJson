@@ -1,33 +1,45 @@
+/**
+ * CSV to JSON Converter (AWS Lambda)
+ * -----------------------------------
+ * Konvertiert eine hochgeladene CSV-Datei aus einem S3-Bucket in eine JSON-Datei
+ * und speichert diese in einem anderen S3-Bucket.
+ * 
+ * Autor: Stefan, Burim und Ken
+ * Quellen: 
+ * - AWS SDK: https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/S3.html
+ * - csv-parser: https://www.npmjs.com/package/csv-parser
+ */
+
 const AWS = require('aws-sdk');
 const s3 = new AWS.S3();
 const csv = require('csv-parser');
 const stream = require('stream');
 
+const DELIMITER = ','; // Anpassbar: ';' oder '\t' für Tab
+
 exports.handler = async (event) => {
     try {
-        // 1. Extrahiere Bucket & Datei-Info aus Event
+        // Extrahiere Bucket- und Datei-Info aus Event
         const bucketName = event.Records[0].s3.bucket.name;
         const fileKey = event.Records[0].s3.object.key;
         const outputBucket = 'mein-json-output-bucket';
         const outputKey = fileKey.replace('.csv', '.json');
 
-        console.log(`Empfangenes S3-Event: Bucket=${bucketName}, Datei=${fileKey}`);
+        console.log(`📥 CSV-Datei empfangen: Bucket=${bucketName}, Datei=${fileKey}`);
 
-        // 2. CSV-Datei aus S3 abrufen
+        // Lade die CSV-Datei aus dem S3-Bucket
         const csvData = await s3.getObject({ Bucket: bucketName, Key: fileKey }).promise();
         if (!csvData.Body) {
-            throw new Error("CSV-Datei konnte nicht geladen werden oder ist leer.");
+            throw new Error("⚠️ Fehler: CSV-Datei konnte nicht geladen werden oder ist leer.");
         }
 
-        // 3. CSV in JSON konvertieren
+        // Konvertiere CSV in JSON
         const jsonData = await parseCsv(csvData.Body);
-
-        // 4. JSON-Daten formatieren (2 Leerzeichen Einrückung)
         const formattedJsonData = JSON.stringify(jsonData, null, 2);
 
-        console.log('Konvertierte JSON-Daten:', formattedJsonData);
+        console.log('✅ Konvertierte JSON-Daten:', formattedJsonData);
 
-        // 5. JSON-Datei in S3 hochladen
+        // Lade die JSON-Datei in den Output-Bucket hoch
         await s3.putObject({
             Bucket: outputBucket,
             Key: outputKey,
@@ -35,13 +47,17 @@ exports.handler = async (event) => {
             ContentType: 'application/json'
         }).promise();
 
-        console.log(`✅ Erfolgreich konvertiert: ${fileKey} -> ${outputKey}`);
+        console.log(`✅ Erfolgreich gespeichert: ${outputKey} in ${outputBucket}`);
     } catch (error) {
         console.error('❌ Fehler:', error);
     }
 };
 
-// ✅ CSV-Parsing-Funktion
+/**
+ * Konvertiert einen CSV-Buffer in ein JSON-Array.
+ * @param {Buffer} csvBuffer - Der Inhalt der CSV-Datei
+ * @returns {Promise<Array>} JSON-Array der Daten
+ */
 function parseCsv(csvBuffer) {
     return new Promise((resolve, reject) => {
         const results = [];
@@ -51,10 +67,22 @@ function parseCsv(csvBuffer) {
         readable.push(null); // Stream-Ende signalisieren
 
         readable
-            .pipe(csv())
+            .pipe(csv({ separator: DELIMITER })) // Nutzt die Variable DELIMITER
             .on('data', (data) => results.push(data))
             .on('end', () => resolve(results))
             .on('error', reject);
     });
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
