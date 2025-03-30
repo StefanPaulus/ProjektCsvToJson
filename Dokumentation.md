@@ -9,6 +9,13 @@ Es ist Ziel dieses Projekts, einen Cloud-Service zur Verfügung zu stellen, der 
 - **CSV zu JSON Konvertierung:** Wenn man eine CSV Datei ins Bucket hochlade wird sie in JSON konventiert
 - **Automatisierte Bereitstellung:** Bereitstellung über ein CLI-Script.
 - **Versionierung:** Versionisierung durch Github
+
+### 1.3 Aufgabenteigung
+Bash script erstellen: Stefan 80% Burim 20%
+Javascript Funktion zum Conventieren machen: Stefan 80% Burim 20%
+Bug Fixes: Ken 90% Burim 10%
+Dokumentation Ken 50% Burim 50%
+
 ---
 
 ## 2. Systemübersicht
@@ -29,20 +36,32 @@ Der Benutzer lädt eine CSV-Datei in das Input-Bucket hoch was wiederum eine AWS
 Wir brauchen Ein Aws Konto und müssen sichergehen ob die Architektur sicher konfiguriert ist
 
 ### 3.2 Installation
-um die AWS Komponente zu instalieren nussten wir ```./test.sh``` instalieren.
+um die AWS Komponente zu instalieren nussten wir ```./init.sh``` instalieren.
 
 Was macht dieses Skript?
 
 ---
 
+
 ### **Variablen definieren**
 ```bash
-AWS_ACCOUNT_ID="577194944584"
-LAMBDA_ROLE_ARN="arn:aws:iam::$AWS_ACCOUNT_ID:role/LabRole"
-REGION="us-east-1"
+#!/bin/bash
+
+set -e  # Beendet das Skript bei einem Fehler
+
+# AWS Account ID abrufen
+ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
+if [ -z "$ACCOUNT_ID" ]; then
+  echo "❌ Fehler: AWS Account ID konnte nicht abgerufen werden!"
+  exit 1
+fi
+
+# AWS Variablen
 INPUT_BUCKET="mein-csv-input-bucket"
 OUTPUT_BUCKET="mein-json-output-bucket"
 LAMBDA_NAME="CsvToJsonConverter"
+LAMBDA_ROLE_ARN="arn:aws:iam::$ACCOUNT_ID:role/LabRole"
+REGION="us-east-1"
 ```
 - Speichert folgende werte:
   - **Account-ID** (AWS-Konto)
@@ -55,76 +74,87 @@ LAMBDA_NAME="CsvToJsonConverter"
 
 ### **S3-Buckets erstellen**
 ```bash
+echo "📂 Erstelle S3-Buckets..."
 aws s3 mb s3://$INPUT_BUCKET || echo "⚠️ Bucket $INPUT_BUCKET existiert bereits."
 aws s3 mb s3://$OUTPUT_BUCKET || echo "⚠️ Bucket $OUTPUT_BUCKET existiert bereits."
 ```
-erstellt ein Bucket für Output und einen für input.
-Fass es diese schon gibt wird eine warnung ausgegeben
+erstellt ein Bucket für Output und einen für input.  
+Falls diese schon gibt, wird eine Warnung ausgegeben
 
 ---
 
 ### **Test-CSV-Datei erstellen**
 ```bash
 TEST_CSV="test.csv"
-echo -e "name,age,city\nAlice,30,New York\nBob,25,San Francisco" > $TEST_CSV
+echo "Erstelle Test-CSV-Datei..."
+echo -e "name,age,city\nAlice,30,New York\nBob,25,San Francisco\nCharlie,35,Boston\nDavid,40,Los Angeles\nEva,22,Chicago\nFrank,29,Miami\nGrace,31,Seattle\nHannah,28,Austin\nIvy,24,Denver\nJack,26,Washington" > $TEST_CSV
 ```
-Erstellt eine CSV datei als Test
+Erstellt eine CSV-Datei als Test
 
 ---
 
 ### **Lambda ZIP-Datei erstellen**
 ```bash
+echo "📦 Erstelle Lambda ZIP..."
 zip -r lambda.zip index.js node_modules
 ```
-Zippt den Lambda-Code und die node Module.
+Zippt den Lambda-Code und die Node-Module.
 
 ---
 
-### ** Lambda-Funktion erstellen oder aktualisieren**
+### **Lambda-Funktion erstellen oder aktualisieren**
 ```bash
-if aws lambda get-function --function-name $LAMBDA_NAME --region $REGION >/dev/null 2>&1; then
-    aws lambda update-function-code --function-name $LAMBDA_NAME --zip-file fileb://lambda.zip --region $REGION
-else
+# Prüfen, ob die Lambda-Funktion existiert
+EXISTING_LAMBDA=$(aws lambda get-function --function-name $LAMBDA_NAME 2>/dev/null || echo "")
+
+if [ -z "$EXISTING_LAMBDA" ]; then
+    echo "🚀 Erstelle Lambda-Funktion..."
     aws lambda create-function --function-name $LAMBDA_NAME \
     --runtime nodejs18.x \
     --role $LAMBDA_ROLE_ARN \
     --handler index.handler \
     --zip-file fileb://lambda.zip \
     --region $REGION
+else
+    echo "⚠️ Lambda-Funktion existiert bereits – aktualisiere Code..."
+    aws lambda update-function-code --function-name $LAMBDA_NAME --zip-file fileb://lambda.zip
 fi
 ```
-Die Lambda Funktion wird je nach dem ob es sie schon gibt aktualisiert oder erstellt
+Die Lambda-Funktion wird je nach dem, ob es sie schon gibt, aktualisiert oder erstellt
 
 ### **Lambda-Funktion für S3-Trigger berechtigen**
 ```bash
+echo "🔑 Prüfe und füge Lambda-Berechtigungen hinzu..."
 aws lambda add-permission --function-name $LAMBDA_NAME \
 --statement-id s3invoke \
---action "lambda:InvokeFunction" \
+--action lambda:InvokeFunction \
 --principal s3.amazonaws.com \
 --source-arn arn:aws:s3:::$INPUT_BUCKET || echo "⚠️ Berechtigung existiert bereits."
 ```
-Der Bucket kriegt hier die Berechtigung, die Lambda-Funktion auszulösen.
+Der Bucket bekommt hier die Berechtigung, die Lambda-Funktion auszulösen.
 
 ---
 
 ### **S3-Trigger für Lambda konfigurieren**
 ```bash
+echo "🔄 Konfiguriere S3-Trigger für Lambda..."
 aws s3api put-bucket-notification-configuration --bucket $INPUT_BUCKET \
 --notification-configuration "{
      \"LambdaFunctionConfigurations\": [
         {
-            \"LambdaFunctionArn\": \"arn:aws:lambda:$REGION:$AWS_ACCOUNT_ID:function:$LAMBDA_NAME\",
-            \"Events\": [\"s3:ObjectCreated:*\"]
+            \"LambdaFunctionArn\": \"arn:aws:lambda:$REGION:$ACCOUNT_ID:function:$LAMBDA_NAME\",
+            \"Events\": [\"s3:ObjectCreated:*\"] 
         }
     ]
-}"
+}" || echo "⚠️ Fehler beim Konfigurieren der S3-Notification."
 ```
-Sorgt dafür dass wenn eine Datei hochgeladen wird, wird Die Lambda-Funktion ausgelöst.
+Sorgt dafür, dass die Lambda-Funktion ausgelöst wird, wenn eine Datei hochgeladen wird.
 
 ---
 
 ### **Test-CSV-Datei hochladen**
 ```bash
+echo "⬆️ Lade Test-CSV hoch..."
 aws s3 cp $TEST_CSV s3://$INPUT_BUCKET/
 ```
 Lädt die Test-CSV in den Input-Bucket hoch.
@@ -133,32 +163,30 @@ Lädt die Test-CSV in den Input-Bucket hoch.
 
 ### **Warten auf die JSON-Datei**
 ```bash
-attempts=0
-while [ $attempts -lt 10 ]; do
-    if aws s3 ls s3://$OUTPUT_BUCKET/test.json >/dev/null 2>&1; then
-        echo "✅ JSON-Datei gefunden!"
-        break
-    fi
-    sleep 3
-    ((attempts++))
-done
+echo "⏳ Warte 10 Sekunden, bis die Lambda-Funktion das JSON erstellt..."
+sleep 10
 ```
-Wartet bis zu 30 Sekunden auf die JSON-Datei im Output-Bucket.
+Wartet, bis die Lambda-Funktion das JSON erstellt.
 
 ---
 
 ### **JSON-Datei herunterladen und anzeigen**
 ```bash
-if aws s3 ls s3://$OUTPUT_BUCKET/test.json >/dev/null 2>&1; then
-    echo "⬇️ Lade JSON herunter..."
-    aws s3 cp s3://$OUTPUT_BUCKET/test.json test.json
-    echo "📜 Inhalt der JSON-Datei:"
-    cat test.json
-else
-    echo "❌ Fehler: JSON-Datei wurde nicht erstellt! Überprüfe die Lambda-Funktion."
-fi
+echo "⬇️ Lade JSON herunter..."
+aws s3 cp s3://$OUTPUT_BUCKET/test.json test.json || echo "⚠️ JSON-Datei nicht gefunden."
+
+echo "📜 Inhalt der JSON-Datei:"
+cat test.json || echo "⚠️ Fehler: JSON konnte nicht gelesen werden."
 ```
-falls es funktioniert hat wird die JSON Datei hochgeladen
+Lädt die JSON-Datei herunter und zeigt deren Inhalt an.
+
+---
+
+### **Fertig!**
+```bash
+echo "✅ Fertig!"
+```
+Das Skript ist abgeschlossen.
 
 ---
 
@@ -211,38 +239,66 @@ Die Konventierung wird von einer Javascript Datei `Index.js` durchgeführt.
 
 #### `Index.js`
 ```js
+/**
+ * CSV to JSON Converter (AWS Lambda)
+ * -----------------------------------
+ * Konvertiert eine hochgeladene CSV-Datei aus einem S3-Bucket in eine JSON-Datei
+ * und speichert diese in einem anderen S3-Bucket.
+ * 
+ * Autor: Stefan, Burim und Ken
+ * Quellen: 
+ * - AWS SDK: https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/S3.html
+ * - csv-parser: https://www.npmjs.com/package/csv-parser
+ */
+
 const AWS = require('aws-sdk');
 const s3 = new AWS.S3();
 const csv = require('csv-parser');
 const stream = require('stream');
+
+const DELIMITER = ','; // Anpassbar: ';' oder '\t' für Tab
+
 exports.handler = async (event) => {
     try {
-        // 1. Extrahiere Bucket & Datei-Info aus Event
+        // Extrahiere Bucket- und Datei-Info aus Event
         const bucketName = event.Records[0].s3.bucket.name;
         const fileKey = event.Records[0].s3.object.key;
         const outputBucket = 'mein-json-output-bucket';
         const outputKey = fileKey.replace('.csv', '.json');
-        console.log(Empfangenes S3-Event: Bucket=${bucketName}, Datei=${fileKey});
-        // 2. CSV-Datei aus S3 abrufen
+
+        console.log(`📥 CSV-Datei empfangen: Bucket=${bucketName}, Datei=${fileKey}`);
+
+        // Lade die CSV-Datei aus dem S3-Bucket
         const csvData = await s3.getObject({ Bucket: bucketName, Key: fileKey }).promise();
-        // 3. CSV in JSON konvertieren
+        if (!csvData.Body) {
+            throw new Error("⚠️ Fehler: CSV-Datei konnte nicht geladen werden oder ist leer.");
+        }
+
+        // Konvertiere CSV in JSON
         const jsonData = await parseCsv(csvData.Body);
-        // 4. JSON-Daten mit schöner Formatierung (2 Leerzeichen Einrückung) und Zeilenumbrüchen
-        const formattedJsonData = JSON.stringify(jsonData, null, 2); // 2 bedeutet 2 Leerzeichen Einrückung
-        console.log('Konvertierte JSON-Daten:', formattedJsonData);
-        // 5. JSON-Datei in S3 hochladen (mit Formatierung)
+        const formattedJsonData = JSON.stringify(jsonData, null, 2);
+
+        console.log('✅ Konvertierte JSON-Daten:', formattedJsonData);
+
+        // Lade die JSON-Datei in den Output-Bucket hoch
         await s3.putObject({
             Bucket: outputBucket,
             Key: outputKey,
-            Body: formattedJsonData,  // Formatierte JSON-Daten
+            Body: formattedJsonData,
             ContentType: 'application/json'
         }).promise();
-        console.log(✅ Erfolgreich konvertiert: ${fileKey} -> ${outputKey});
+
+        console.log(`✅ Erfolgreich gespeichert: ${outputKey} in ${outputBucket}`);
     } catch (error) {
         console.error('❌ Fehler:', error);
     }
 };
-// ✅ Neue CSV-Parsing-Funktion
+
+/**
+ * Konvertiert einen CSV-Buffer in ein JSON-Array.
+ * @param {Buffer} csvBuffer - Der Inhalt der CSV-Datei
+ * @returns {Promise<Array>} JSON-Array der Daten
+ */
 function parseCsv(csvBuffer) {
     return new Promise((resolve, reject) => {
         const results = [];
@@ -250,8 +306,9 @@ function parseCsv(csvBuffer) {
         readable._read = () => {}; // Keine neue Datenquelle nötig
         readable.push(csvBuffer);
         readable.push(null); // Stream-Ende signalisieren
+
         readable
-            .pipe(csv())
+            .pipe(csv({ separator: DELIMITER })) // Nutzt die Variable DELIMITER
             .on('data', (data) => results.push(data))
             .on('end', () => resolve(results))
             .on('error', reject);
@@ -292,7 +349,7 @@ Jack,26,Washington
 
 ## 8. Reflexion
 ### Ken
-Da ich in den Blöcken in denen wir dieses Projekt gamacht haben krank war konnte habe ich hauptzächlich ausserhalb der Schulzeit daran gearbeitet. Jedoch konnte ich beim zweiten Block mithelfen per Teams-call. Ich habe hauptzächlich beim Bugfixen geholfen per pair programming (entweder durch shared screen in Teams oder durch's physisched mitschauen) und die jeweiligen Tests überprüft. Ich habe daher imernoch mein bestes versucht hilfreich zu sein und beim Projekt etwas beizutragen.
+Da ich in den Blöcken in denen wir dieses Projekt gamacht haben krank war konnte habe ich hauptzächlich ausserhalb der Schulzeit daran gearbeitet. Jedoch konnte ich beim zweiten Block mithelfen per Teams-call. Ich habe hauptzächlich beim Bugfixen geholfen per pair programming (entweder durch shared screen in Teams oder durch's physisched mitschauen) und die jeweiligen Tests überprüft. Ich habe daher imernoch mein bestes versucht hilfreich zu sein und beim Projekt etwas beizutragen. Zu de Habe ich mit Burim An der Dokumentation gearbeitet.
 
 ### Stefan
 
