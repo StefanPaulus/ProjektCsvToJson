@@ -14,7 +14,7 @@ Es ist Ziel dieses Projekts, einen Cloud-Service zur Verfügung zu stellen, der 
 Bash script erstellen: Stefan 80% Burim 20%
 Javascript Funktion zum Conventieren machen: Stefan 80% Burim 20%
 Bug Fixes: Ken 90% Burim 10%
-Dokumentation Ken 50% Burim 50%
+Dokumentation Ken 30% Burim 70%
 
 ---
 
@@ -352,18 +352,18 @@ Jack,26,Washington
 Da ich in den Blöcken in denen wir dieses Projekt gamacht haben krank war konnte habe ich hauptzächlich ausserhalb der Schulzeit daran gearbeitet. Jedoch konnte ich beim zweiten Block mithelfen per Teams-call. Ich habe hauptzächlich beim Bugfixen geholfen per pair programming (entweder durch shared screen in Teams oder durch's physisched mitschauen) und die jeweiligen Tests überprüft. Ich habe daher imernoch mein bestes versucht hilfreich zu sein und beim Projekt etwas beizutragen. Zu de Habe ich mit Burim An der Dokumentation gearbeitet.
 
 ### Stefan
+Ich denke, wir haben einen ziemlich guten Job gemacht. Wir sind mit allem fertig geworden, und das Skript sowie die Lambda-Funktion funktionieren. Unsere Teamarbeit war trotz Ken's Krankheit ziemlich gut. Wir haben Pair Programming gemacht, und das Skript sowie die Java-Funktion sind meiner Meinung nach sehr gut gelungen, wir haben sie gut dokumentiert und strukturiert.
+
+Was ich an mir selbst verbessern möchte, ist, dass ich alles genau anschaue, bevor ich einen Push mache oder sage, dass das Skript funktioniert. Oft entdecke ich später noch Anforderungen, die ich nicht implementiert habe, oder merke beim erneuten Ausführen, dass es doch nicht funktioniert z.b als ich dachte das es funktioniert, es hat aber nur funktioniert weil ich die Lambda-Funktion schn vom letzen mal hatte und sie im Skript gar nicht erstellt wird. Außerdem sollte ich die Aufgaben noch ein bisschen früher erledigen und nicht immer auf den letzten Drücker.
 
 ### Burim
-
+Ich habe einer seits Stefan mit dem erstellen des Bash skriptes und der Javascript Funktion geholfen. Und Hauptzächlich an der Dokumentation gearbeitet. An dieser habe ich Inkrimentell im verlaufe der Blöcke gearbeitet. Ken hat mir am schluss wie vereinbart auch mit der Doku geholfen. Wir mussten etwas improvisieren um Ken im Projekt einzubauen jedoch gaube ich wir haben einen guten Job gemacht. Ich habe die Doku sehr unterschätzt und habe deshalb vieles für den schluss aufgehoben. Mitnehmen kann ich das ich die lernziele und den Auftrag selber gut durchlesen muss am Anfeng eines Projektes sodass ich besser eiplanen kann wenn ich was machen muss.
 
 ---
 
 ## 9. Quellen und Referenzen
 - **M346-Projekt-CsvToJson-2025 PDF:** [M346-Projekt-CsvToJson-2025](https://moodle4.ksb-web.ch/pluginfile.php/10076/mod_resource/content/1/M346-Projekt-CsvToJson-2025.pdf)
 
----
-
-## 10. Anhang
 
 ### 10.1 Bilder
 - In der Shell der Ubuntu Maschiene
