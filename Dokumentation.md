@@ -192,7 +192,15 @@ Der Test stellt stellt sicher das CSV Dateien Wirklich in JSON Konventiert werde
 
 ### 5.2 Testprotokolle und Screenshots
 
+![Test-1](./Test_1.jpg)
 
+![Test-2](./Test_2.jpg)
+
+![Test-3](./Test_3A.jpg)
+
+![Test-4](./Test_4.jpg)
+
+![Test-5](./Test_5.jpg)
 
 ---
 
@@ -288,18 +296,18 @@ Da ich in den Blöcken in denen wir dieses Projekt gamacht haben krank war konnt
 
 ### Stefan
 
+### Burim
+
 
 ---
 
 ## 9. Quellen und Referenzen
-- **AWS Lambda-Dokumentation:** [AWS Lambda Documentation](https://docs.aws.amazon.com/lambda/)
-- **AWS S3-Dokumentation:** [AWS S3 Documentation](https://docs.aws.amazon.com/s3/)
-- **CSV-zu-JSON-Konvertierung:** [CSV to JSON Converter](https://www.csvjson.com/csv2json)
+- **M346-Projekt-CsvToJson-2025 PDF:** [M346-Projekt-CsvToJson-2025](https://moodle4.ksb-web.ch/pluginfile.php/10076/mod_resource/content/1/M346-Projekt-CsvToJson-2025.pdf)
 
 ---
 
 ## 10. Anhang
 
-### 10.1 Grafiken und Diagramme
-- Diagramm der Systemarchitektur.
-- Beispiele für CSV- und JSON-Dateien.
+### 10.1 Bilder
+- In der Shell der Ubuntu Maschiene
+- Aws Learner Lab
