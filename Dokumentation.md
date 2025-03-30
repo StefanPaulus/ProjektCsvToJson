@@ -201,13 +201,12 @@ Das Skript ist abgeschlossen.
 | `Dokumentation.md`   | Dokumentation des Projekts.|
 | `README.md`         | Allgemeine Projektbeschreibung mit Nutzungshinweisen. |
 | `index.js`          | Extrahier und C¨Konventiert die CSV Datei |
-| `init.sh`          | Shell-Skript zur Initialisierung oder Einrichtung der Umgebung. |
+| `init.sh`          | Shell-Skript zur Automatisierung aller prozesse. |
 | `lambda.zip`       | Bereitstellung einer AWS Lambda-Funktion. |
 | `package-lock.json` | Bildet die instalierte npm-Pakete ab. |
 | `package.json`      | Enthält Metadaten. |
 | `test.csv`         | Testdatei im CSV-Format. |
 | `test.json`        | Testdatei im JSON-Format. |
-| `test.sh`          | Shell-Skript für Tests oder Automatisierungsprozesse. |
 
 
 
@@ -221,14 +220,19 @@ Der Test stellt stellt sicher das CSV Dateien Wirklich in JSON Konventiert werde
 ### 5.2 Testprotokolle und Screenshots
 
 ![Test-1](./Test_1.jpg)
+Man sieht das die Buckets erstellt wurden dank der Konsolen ausgabe.
 
 ![Test-2](./Test_2.jpg)
+Die Lambdafunktion wurde korrekt erstellt.
 
 ![Test-3](./Test_3A.jpg)
+Csv wurde hochgeladen und json korrekt runtergeladen und angezeigt.
 
 ![Test-4](./Test_4.jpg)
+Buckets in s3
 
 ![Test-5](./Test_5.jpg)
+Fertige test.json datei
 
 ---
 
@@ -333,7 +337,59 @@ Jack,26,Washington
 
 #### Beispiel für das JSON-Ergebnis:
 ```json
-[{"name":"Alice","age":"30","city":"New York"},{"name":"Bob","age":"25","city":"San Francisco"},{"name":"Charlie","age":"35","city":"Boston"},{"name":"David","age":"40","city":"Los Angeles"},{"name":"Eva","age":"22","city":"Chicago"},{"name":"Frank","age":"29","city":"Miami"},{"name":"Grace","age":"31","city":"Seattle"},{"name":"Hannah","age":"28","city":"Austin"},{"name":"Ivy","age":"24","city":"Denver"},{"name":"Jack","age":"26","city":"Washington"}]
+[
+  {
+    "name": "Alice",
+    "age": "30",
+    "city": "New York"
+  },
+  {
+    "name": "Bob",
+    "age": "25",
+    "city": "San Francisco"
+  },
+  {
+    "name": "Charlie",
+    "age": "35",
+    "city": "Boston"
+  },
+  {
+    "name": "David",
+    "age": "40",
+    "city": "Los Angeles"
+  },
+  {
+    "name": "Eva",
+    "age": "22",
+    "city": "Chicago"
+  },
+  {
+    "name": "Frank",
+    "age": "29",
+    "city": "Miami"
+  },
+  {
+    "name": "Grace",
+    "age": "31",
+    "city": "Seattle"
+  },
+  {
+    "name": "Hannah",
+    "age": "28",
+    "city": "Austin"
+  },
+  {
+    "name": "Ivy",
+    "age": "24",
+    "city": "Denver"
+  },
+  {
+    "name": "Jack",
+    "age": "26",
+    "city": "Washington"
+  }
+]
+
 ```
 
 ---
